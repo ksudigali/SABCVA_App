@@ -46,6 +46,7 @@ enum class ContactType{
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun BusinessProfileScreen(
+    modifier: Modifier = Modifier,
     onBackClick: () -> Unit = {},
     onShareClick: () -> Unit = {}
 ) {
