@@ -1,11 +1,9 @@
 package com.sabcva.app
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -13,31 +11,27 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.TextFieldValue
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sabcva.app.ui.theme.SABCVAAppTheme
 
-
-
-
 @Composable
-fun CreateAnnouncementScreen(modifier: Modifier = Modifier) {
-    var selectedType by remember { mutableStateOf("Announcement") }
-    var title by remember { mutableStateOf(TextFieldValue("")) }
-    var description by remember { mutableStateOf(TextFieldValue("")) }
+fun CreateAnnouncementScreen(
+    viewModel: CreateAnnouncementViewModel = viewModel(),
+    modifier: Modifier = Modifier
+) {
+    val uiState = viewModel.uiState
 
     Column(
         modifier = modifier
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        // Top Row: Admin + Post Button
+        // Header
         Text(
             text = "Admin Account",
             color = Color.Red,
@@ -64,42 +58,64 @@ fun CreateAnnouncementScreen(modifier: Modifier = Modifier) {
             )
 
             TextButton(
-                onClick = { /* handle post */ },
-                modifier = Modifier.align(Alignment.CenterEnd)
+                onClick = { viewModel.postAnnouncement() },
+                modifier = Modifier.align(Alignment.CenterEnd),
+                enabled = !uiState.isLoading && uiState.title.isNotBlank()
             ) {
-                Text("Post", fontFamily = VietnamPro, fontSize = 16.sp, color = Color(0xFF4A739C), fontWeight = FontWeight.Bold)
+                if (uiState.isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        color = Color(0xFF4A739C),
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Text(
+                        "Post",
+                        fontFamily = VietnamPro,
+                        fontSize = 16.sp,
+                        color = Color(0xFF4A739C),
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
 
         Spacer(modifier = Modifier.height(0.dp))
 
-        // Toggle Chips
+        // Type toggle buttons
         Row(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.align(Alignment.CenterHorizontally)
         ) {
             listOf("Announcement", "Post", "Event").forEach { type ->
                 OutlinedButton(
-                    onClick = { selectedType = type },
+                    onClick = { viewModel.selectType(type) },
                     shape = RoundedCornerShape(30),
                     border = BorderStroke(1.dp, Color.Black),
                     colors = ButtonDefaults.outlinedButtonColors(
-                        containerColor = if (selectedType == type) Color.LightGray.copy(alpha = 0.4f) else Color.Transparent
+                        containerColor = if (uiState.selectedType == type)
+                            Color.LightGray.copy(alpha = 0.4f)
+                        else Color.Transparent
                     ),
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 0.dp),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+                    contentPadding = PaddingValues(horizontal = 11.dp, vertical = 0.dp) //
                 ) {
-                    Text(text = type, fontFamily = VietnamPro, color = Color.Black, fontSize = 14.sp)
+                    Text(
+                        text = type,
+                        fontFamily = VietnamPro,
+                        color = Color.Black,
+                        fontSize = 14.sp
+                    )
                 }
             }
         }
 
+
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Title Input
+        // Title input
         TextField(
-            value = title,
-            onValueChange = { title = it },
+            value = uiState.title,
+            onValueChange = { viewModel.updateTitle(it) },
             shape = RoundedCornerShape(12.dp),
             colors = TextFieldDefaults.colors(
                 focusedContainerColor = Color(0xFFE8EDF5),
@@ -108,17 +124,22 @@ fun CreateAnnouncementScreen(modifier: Modifier = Modifier) {
                 unfocusedIndicatorColor = Color.Transparent,
                 disabledIndicatorColor = Color.Transparent
             ),
-            placeholder = { Text("Title", color = Color(0xFF4A739C), fontFamily = VietnamPro)},
-            modifier = Modifier
-                .fillMaxWidth()
+            placeholder = {
+                Text(
+                    "Title",
+                    color = Color(0xFF4A739C),
+                    fontFamily = VietnamPro
+                )
+            },
+            modifier = Modifier.fillMaxWidth()
         )
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Description Input
+        // Description input
         TextField(
-            value = description,
-            onValueChange = { description = it },
+            value = uiState.description,
+            onValueChange = { viewModel.updateDescription(it) },
             shape = RoundedCornerShape(12.dp),
             colors = TextFieldDefaults.colors(
                 focusedContainerColor = Color(0xFFE8EDF5),
@@ -127,23 +148,50 @@ fun CreateAnnouncementScreen(modifier: Modifier = Modifier) {
                 unfocusedIndicatorColor = Color.Transparent,
                 disabledIndicatorColor = Color.Transparent
             ),
-            placeholder = { Text("Description", color = Color(0xFF4A739C), fontFamily = VietnamPro) },
+            placeholder = {
+                Text(
+                    "Description",
+                    color = Color(0xFF4A739C),
+                    fontFamily = VietnamPro
+                )
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(160.dp)
         )
 
+        // Success message
+        if (uiState.isPosted) {
+            Text(
+                text = "Announcement posted successfully!",
+                color = Color.Green,
+                fontFamily = VietnamPro,
+                modifier = Modifier
+                    .padding(top = 16.dp)
+                    .align(Alignment.CenterHorizontally)
+            )
+        }
+
+        // Error message
+        uiState.errorMessage?.let { error ->
+            Text(
+                text = error,
+                color = Color.Red,
+                fontFamily = VietnamPro,
+                modifier = Modifier
+                    .padding(top = 16.dp)
+                    .align(Alignment.CenterHorizontally)
+            )
+        }
+
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Static Media Section
+        // Media Upload Placeholder (UI only)
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .border(
-                    BorderStroke(
-                        width = 1.dp,
-                        color = Color(0xFFCFDBE8)
-                    ),
+                    BorderStroke(1.dp, Color(0xFFCFDBE8)),
                     shape = RoundedCornerShape(12.dp)
                 )
                 .padding(16.dp),
@@ -154,7 +202,7 @@ fun CreateAnnouncementScreen(modifier: Modifier = Modifier) {
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.Black,
-                modifier = Modifier.align(Alignment.CenterHorizontally)
+                fontFamily = VietnamPro
             )
 
             Text(
@@ -162,25 +210,25 @@ fun CreateAnnouncementScreen(modifier: Modifier = Modifier) {
                 fontSize = 14.sp,
                 color = Color(0xFF0D141C),
                 textAlign = TextAlign.Center,
+                fontFamily = VietnamPro,
                 modifier = Modifier.padding(top = 4.dp)
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Styled "Choose Media" Button (visual only)
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(50))
                     .background(Color(0xFFEFF2FA))
                     .padding(horizontal = 24.dp, vertical = 10.dp),
-                contentAlignment = Alignment.Center // This centers the text inside the Box
+                contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = "Choose Media",
                     fontWeight = FontWeight.Bold,
                     color = Color.Black,
                     fontSize = 14.sp,
-                    modifier = Modifier.align(Alignment.Center) // Additional centering
+                    fontFamily = VietnamPro
                 )
             }
         }
